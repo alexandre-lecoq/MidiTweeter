@@ -1,13 +1,12 @@
-﻿using System.Linq;
+﻿using NAudio.Midi;
 using NAudio.Wave;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 
 namespace MidiTweeter
 {
-    using System;
-    using System.Collections.Generic;
-    using NAudio.Midi;
-    using System.Globalization;
-
     public static class Program
     {
         private static readonly string[] FormatTypeText = 
@@ -21,7 +20,7 @@ namespace MidiTweeter
         {
             if (args == null)
             {
-                throw new ArgumentNullException("args", "argument array cannot be null");
+                throw new ArgumentNullException(nameof(args), "argument array cannot be null");
             }
 
             if (args.Length > 0)
@@ -48,7 +47,7 @@ namespace MidiTweeter
             double tempoRatio = 1;
             Comparison<Note> noteComparisonMethod = CompareNoteByHighNumberThenHighVelocity;
             var quietMode = false;
-            var noPrecussion = false;
+            var noPercussion = false;
 
             var filename = args[0];
 
@@ -70,7 +69,7 @@ namespace MidiTweeter
                     }
                     else if (arg == "-NOPERC")
                     {
-                        noPrecussion = true;
+                        noPercussion = true;
                     }
                     else if (arg.StartsWith("-P"))
                     {
@@ -136,7 +135,7 @@ namespace MidiTweeter
                 Console.WriteLine("Tracks: {0}", mf.Tracks);
                 Console.WriteLine("");
 
-                var timeSliceList = ReadMidiFile(mf, tracksToSkip, tempoRatio, noPrecussion);
+                var timeSliceList = ReadMidiFile(mf, tracksToSkip, tempoRatio, noPercussion);
 
                 timeSliceList = RemoveSliceOverlapping(timeSliceList);
 
@@ -257,52 +256,38 @@ namespace MidiTweeter
 
                 foreach (var midiEvent in drumFilteredMidiEventList)
                 {
-                    if (midiEvent is TextEvent) // : MetaEvent
+                    if (midiEvent is TextEvent textEvent) // : MetaEvent
                     {
-                        var textEvent = midiEvent as TextEvent;
-
                         Console.WriteLine("{0}: {1}", textEvent.MetaEventType.ToString(), textEvent.Text);
                     }
-                    else if (midiEvent is TimeSignatureEvent) // : MetaEvent
+                    else if (midiEvent is TimeSignatureEvent timeSignatureEvent) // : MetaEvent
                     {
-                        var timeSignatureEvent = midiEvent as TimeSignatureEvent;
-
                         //WriteWarningLine("TimeSignatureEvent", timeSignatureEvent.ToString());
                     }
-                    else if (midiEvent is TrackSequenceNumberEvent) // : MetaEvent
+                    else if (midiEvent is TrackSequenceNumberEvent trackSequenceNumberEvent) // : MetaEvent
                     {
-                        var trackSequenceNumberEvent = midiEvent as TrackSequenceNumberEvent;
-
                         WriteWarningLine("TrackSequenceNumberEvent", trackSequenceNumberEvent.ToString());
                     }
-                    else if (midiEvent is KeySignatureEvent) // : MetaEvent
+                    else if (midiEvent is KeySignatureEvent keySignatureEvent) // : MetaEvent
                     {
-                        var keySignatureEvent = midiEvent as KeySignatureEvent;
-
                         //WriteWarningLine("KeySignatureEvent", keySignatureEvent.ToString());
                     }
-                    else if (midiEvent is TempoEvent) // : MetaEvent
+                    else if (midiEvent is TempoEvent tempoEvent) // : MetaEvent
                     {
-                        var tempoEvent = midiEvent as TempoEvent;
-
                         tempo = (int)Math.Round(tempoEvent.Tempo * tempoRatio);
                         Console.WriteLine("Tempo: {0}", tempo);
                     }
-                    else if (midiEvent is MetaEvent)
+                    else if (midiEvent is MetaEvent metaEvent)
                     {
-                        var metaEvent = midiEvent as MetaEvent;
-
                         if ((metaEvent.MetaEventType != MetaEventType.SequencerSpecific) && (metaEvent.MetaEventType != MetaEventType.EndTrack) && (metaEvent.MetaEventType != MetaEventType.MidiChannel) && (metaEvent.MetaEventType != MetaEventType.MidiPort))
                             WriteWarningLine("MetaEvent", metaEvent.ToString());
                     }
-                    else if (midiEvent is ControlChangeEvent)
+                    else if (midiEvent is ControlChangeEvent controlChangeEvent)
                     {
-                        var controlChangeEvent = midiEvent as ControlChangeEvent;
                         //WriteWarningLine("ControlChangeEvent", controlChangeEvent.ToString());
                     }
-                    else if (midiEvent is PatchChangeEvent)
+                    else if (midiEvent is PatchChangeEvent patchChangeEvent)
                     {
-                        var patchChangeEvent = midiEvent as PatchChangeEvent;
                         Console.WriteLine("Patch: {0}", PatchChangeEvent.GetPatchName(patchChangeEvent.Patch));
 
                         if (skipDrums && (patchChangeEvent.Patch >= 112))
@@ -311,30 +296,26 @@ namespace MidiTweeter
                             break;
                         }
                     }
-                    else if (midiEvent is NoteOnEvent)
+                    else if (midiEvent is NoteOnEvent noteEvent1)
                     {
-                        if (MidiEvent.IsNoteOff(midiEvent) == false)
+                        if (MidiEvent.IsNoteOff(noteEvent1) == false)
                         {
-                            var noteEvent = midiEvent as NoteOnEvent;
-
-                            if (noteEvent.OffEvent != null)
+                            if (noteEvent1.OffEvent != null)
                             {
                                 var ticksPerMinute = mf.DeltaTicksPerQuarterNote * tempo;
                                 var millisecondsPerTick = 60.0 * 1000.0 / ticksPerMinute;
 
-                                var start = (int)Math.Round(noteEvent.AbsoluteTime * millisecondsPerTick);
-                                var stop = (int)Math.Round(noteEvent.OffEvent.AbsoluteTime * millisecondsPerTick);
+                                var start = (int)Math.Round(noteEvent1.AbsoluteTime * millisecondsPerTick);
+                                var stop = (int)Math.Round(noteEvent1.OffEvent.AbsoluteTime * millisecondsPerTick);
 
-                                timeSliceList.Add(new TimeSlice(start, stop, new Note(noteEvent.NoteNumber, noteEvent.Velocity)));
+                                timeSliceList.Add(new TimeSlice(start, stop, new Note(noteEvent1.NoteNumber, noteEvent1.Velocity)));
                             }
                             else
                                 WriteWarningLine("NoteOnEvent", "No Corresponding Note Off Event");
                         }
                     }
-                    else if (midiEvent is NoteEvent)
+                    else if (midiEvent is NoteEvent noteEvent)
                     {
-                        var noteEvent = midiEvent as NoteEvent;
-
                         if (noteEvent.CommandCode != MidiCommandCode.NoteOff)
                             WriteWarningLine("NoteEvent", noteEvent.ToString());
                     }
@@ -518,17 +499,17 @@ namespace MidiTweeter
             var sampleCount = (int)Math.Round(decimalSampleCount);
             var sampleBuffer = new int[sampleCount];
 
-            var sampleEnveloppe = new double[sampleCount];
+            var sampleEnvelope = new double[sampleCount];
 
             for (var i = 0; i < sampleBuffer.Length; i++)
             {
                 if (i < sampleBuffer.Length - 10)
                 {
-                    sampleEnveloppe[i] = 1.0;
+                    sampleEnvelope[i] = 1.0;
                 }
                 else
                 {
-                    sampleEnveloppe[i] = (sampleBuffer.Length - i - 1) / 10.0;
+                    sampleEnvelope[i] = (sampleBuffer.Length - i - 1) / 10.0;
                 }
             }
 
@@ -536,7 +517,7 @@ namespace MidiTweeter
             {
                 // sinusoidal signal
                 var sineValue = (i * 2.0 * Math.PI) / (sampleBuffer.Length - 1);
-                var sampleValue = (int)(Math.Round((Math.Sin(sineValue) + 1.0) * maxSampleValue / 2.0) * sampleEnveloppe[i]);
+                var sampleValue = (int)(Math.Round((Math.Sin(sineValue) + 1.0) * maxSampleValue / 2.0) * sampleEnvelope[i]);
                 sampleBuffer[i] = sampleValue;
             }
 

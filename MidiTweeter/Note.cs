@@ -2,30 +2,19 @@
 {
     public class Note
     {
-        int _noteNumber;
-        int _velocity;
+        public int NoteNumber { get; }
 
-        public int NoteNumber
-        {
-            get { return _noteNumber; }
-            set { _noteNumber = value; }
-        }
-
-        public int Velocity
-        {
-            get { return _velocity; }
-            set { _velocity = value; }
-        }
+        public int Velocity { get; }
 
         public Note(int noteNumber, int velocity)
         {
-            _noteNumber = noteNumber;
-            _velocity = velocity;
+            NoteNumber = noteNumber;
+            Velocity = velocity;
         }
 
         public override string ToString()
         {
-            return "NoteNumber = " + _noteNumber + " ; Velocity = " + _velocity;
+            return $"NoteNumber = {NoteNumber} ; Velocity = {Velocity}";
         }
     }
 }

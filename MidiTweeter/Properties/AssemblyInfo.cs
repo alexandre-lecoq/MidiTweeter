@@ -11,7 +11,7 @@ using System.Resources;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("MidiTweeter")]
-[assembly: AssemblyCopyright("Copyright © 2010")]
+[assembly: AssemblyCopyright("Copyright © 2010-2020 Alexandre Lecoq")]
 [assembly: AssemblyTrademark("MidiTweeter")]
 [assembly: AssemblyCulture("")]
 

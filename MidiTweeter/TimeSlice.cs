@@ -4,11 +4,11 @@
 
     public class TimeSlice
     {
-        public int Start { get; set; }
+        public int Start { get; }
 
-        public int Stop { get; set; }
+        public int Stop { get; }
 
-        public List<Note> NoteList { get; set; }
+        public List<Note> NoteList { get; }
 
         public void AddNoteList(List<Note> noteList)
         {
@@ -33,7 +33,7 @@
 
         public override string ToString()
         {
-            return string.Format("Start = {0} ; Stop = {1} ; NoteCount = {2}", Start, Stop, NoteList.Count);
+            return $"Start = {Start} ; Stop = {Stop} ; NoteCount = {NoteList.Count}";
         }
     }
 }
