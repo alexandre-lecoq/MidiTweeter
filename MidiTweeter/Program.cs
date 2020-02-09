@@ -433,8 +433,8 @@ namespace MidiTweeter
                 {
                     var duration = ts.Stop - ts.Start;
 
-                    var sampleCount = (int)Math.Round(44.1*duration);
-                    var sampleBuffer = new int[sampleCount];
+                    var sampleCount = (int) Math.Round(44.1 * duration);
+                    var sampleBuffer = new short[sampleCount];
 
                     if (ts.NoteList.Count == 0)
                     {
@@ -447,7 +447,7 @@ namespace MidiTweeter
                             var noteNumber = note.NoteNumber;
                             var shiftedNote = noteNumber + halfStepOffset;
                             var frequency = GetMidiNoteFrequency(shiftedNote);
-                            var volume = note.Velocity/127.0;
+                            var volume = note.Velocity / 127.0;
 
                             var patternBuffer = GetPatternBuffer(frequency, volume);
 
@@ -455,13 +455,9 @@ namespace MidiTweeter
 
                             for (var i = 0; i < sampleBuffer.Length; i++)
                             {
-                                sampleBuffer[i] += patternBuffer[j];
+                                var sample = ((int)sampleBuffer[i] + patternBuffer[j]) / 2;
+                                sampleBuffer[i] = (short)sample;
                                 
-                                if (sampleBuffer[i] > 65535)
-                                {
-                                    sampleBuffer[i] = 65535;
-                                }
-
                                 j++;
 
                                 if (j == patternBuffer.Length)
@@ -478,7 +474,7 @@ namespace MidiTweeter
             }
         }
 
-        private static byte[] ToByteArray(int[] intArray)
+        private static byte[] ToByteArray(short[] intArray)
         {
             var buffer = new byte[intArray.Length * 2];
             var x = 0;
@@ -492,32 +488,18 @@ namespace MidiTweeter
             return buffer;
         }
 
-        private static int[] GetPatternBuffer(uint frequency, double volume)
+        private static short[] GetPatternBuffer(uint frequency, double volume)
         {
-            var maxSampleValue = 0x1FFF * volume;
+            var maxSampleValue = 0x4000 * volume;
             var decimalSampleCount = 44100.0 / frequency;
-            var sampleCount = (int)Math.Round(decimalSampleCount);
-            var sampleBuffer = new int[sampleCount];
-
-            var sampleEnvelope = new double[sampleCount];
-
-            for (var i = 0; i < sampleBuffer.Length; i++)
-            {
-                if (i < sampleBuffer.Length - 10)
-                {
-                    sampleEnvelope[i] = 1.0;
-                }
-                else
-                {
-                    sampleEnvelope[i] = (sampleBuffer.Length - i - 1) / 10.0;
-                }
-            }
+            var sampleCount = (int) decimalSampleCount;
+            var sampleBuffer = new short[sampleCount];
 
             for (var i = 0; i < sampleBuffer.Length; i++)
             {
                 // sinusoidal signal
-                var sineValue = (i * 2.0 * Math.PI) / (sampleBuffer.Length - 1);
-                var sampleValue = (int)(Math.Round((Math.Sin(sineValue) + 1.0) * maxSampleValue / 2.0) * sampleEnvelope[i]);
+                var sineValue = (i * 2.0 * Math.PI) / sampleBuffer.Length;
+                var sampleValue = (short) Math.Round(Math.Sin(sineValue) * maxSampleValue);
                 sampleBuffer[i] = sampleValue;
             }
 
